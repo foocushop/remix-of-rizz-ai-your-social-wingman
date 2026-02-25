@@ -12,9 +12,20 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64 } = await req.json();
+    const { imageBase64, previousAnalyses } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Build context from previous analyses
+    let contextBlock = "";
+    if (previousAnalyses && previousAnalyses.length > 0) {
+      contextBlock = `\n\nCONTEXTE DES ANALYSES PRÉCÉDENTES DE CET UTILISATEUR (pour cohérence du storyline) :\n`;
+      for (const a of previousAnalyses.slice(0, 5)) {
+        contextBlock += `- Mood précédent : ${a.mood_analysis || "N/A"}\n`;
+        if (a.responses?.ndaanaan?.[0]) contextBlock += `  Dernière réponse suggérée : "${a.responses.ndaanaan[0]}"\n`;
+      }
+      contextBlock += `\nUtilise ce contexte pour que les nouvelles réponses soient cohérentes avec l'évolution de la conversation. Adapte le ton si la relation progresse.\n`;
+    }
 
     const systemPrompt = `Tu es un expert en séduction urbaine et en communication sur les réseaux sociaux, spécialisé dans le contexte culturel sénégalais et africain francophone.
 
@@ -50,7 +61,7 @@ RÈGLES IMPORTANTES:
 - Adapte les réponses au contexte visible dans la capture
 - Punchlines originales adaptées aux réseaux sociaux
 - Pas de ponctuation excessive
-- Sois naturel comme si tu parlais à un pote`;
+- Sois naturel comme si tu parlais à un pote${contextBlock}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -106,7 +117,6 @@ RÈGLES IMPORTANTES:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    // Extract JSON from response
     let parsed;
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
