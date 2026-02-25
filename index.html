@@ -28,5 +28,13 @@
   <body class="dark">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      (function(){
+        var s='.lovable-badge,#lovable-badge,[class*="lovable-badge"],a[href*="lovable.dev"],[data-lovable-badge],iframe[src*="lovable"]';
+        function r(){document.querySelectorAll(s).forEach(function(e){e.remove()});}
+        r();
+        new MutationObserver(r).observe(document.body,{childList:true,subtree:true});
+      })();
+    </script>
   </body>
 </html>
