@@ -7,6 +7,7 @@ import ResponseCards, { AIResponses } from "@/components/ResponseCards";
 import RizzMeter from "@/components/RizzMeter";
 import PremiumModal from "@/components/PremiumModal";
 import AuthModal from "@/components/AuthModal";
+import SocialProofToast from "@/components/SocialProofToast";
 import { ArrowLeft, Crown, Copy, CheckCircle, LogOut, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -309,6 +310,7 @@ const Index = () => {
 
       <PremiumModal isOpen={showPremium} onClose={() => setShowPremium(false)} />
       <AuthModal isOpen={showAuth} onClose={() => setShowAuth(false)} onSuccess={handleAuthSuccess} />
+      <SocialProofToast />
     </div>
   );
 };
