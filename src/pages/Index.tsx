@@ -249,7 +249,7 @@ const Index = () => {
       <AnimatePresence mode="wait">
         {state === "hero" && (
           <motion.div key="hero" exit={{ opacity: 0, y: -20 }}>
-            <HeroSection onStartScan={handleStartScan} />
+            <HeroSection onStartScan={handleStartScan} user={user} isVip={isVip} onLogin={() => setShowAuth(true)} onLogout={handleLogout} />
           </motion.div>
         )}
         {state === "upload" && (
