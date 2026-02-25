@@ -131,7 +131,19 @@
   .lovable-badge,
   .lovable,
   [class*="lovable"],
-  iframe[src*="lovable"] {
+  [id*="lovable"],
+  iframe[src*="lovable"],
+  a[href*="lovable.dev"],
+  div[style*="z-index: 2147483647"],
+  #lovable-badge {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    clip: rect(0,0,0,0) !important;
   }
 }
