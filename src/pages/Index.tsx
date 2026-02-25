@@ -7,7 +7,7 @@ import ResponseCards, { AIResponses } from "@/components/ResponseCards";
 import RizzMeter from "@/components/RizzMeter";
 import PremiumModal from "@/components/PremiumModal";
 import AuthModal from "@/components/AuthModal";
-import { ArrowLeft, Crown, Copy, CheckCircle } from "lucide-react";
+import { ArrowLeft, Crown, Copy, CheckCircle, LogOut, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -168,6 +168,15 @@ const Index = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsVip(false);
+    setUploadsCount(0);
+    setState("hero");
+    toast.success("Déconnecté ✌️");
+  };
+
   return (
     <div className="min-h-screen bg-background relative">
       {/* Top bar */}
@@ -188,13 +197,24 @@ const Index = () => {
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/20 text-secondary font-bold">VIP 👑</span>
               )}
             </div>
-            <button
-              onClick={() => (user && !isVip && creditsLeft <= 0 ? setShowPremium(true) : !user ? setShowAuth(true) : null)}
-              className="flex items-center gap-1 text-xs text-secondary"
-            >
-              <Crown className="w-4 h-4" />
-              <span className="font-medium">{isVip ? "∞" : creditsLeft}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {!user && (
+                <button
+                  onClick={() => setShowAuth(true)}
+                  className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="font-medium">Connexion</span>
+                </button>
+              )}
+              <button
+                onClick={() => (user && !isVip && creditsLeft <= 0 ? setShowPremium(true) : !user ? setShowAuth(true) : null)}
+                className="flex items-center gap-1 text-xs text-secondary"
+              >
+                <Crown className="w-4 h-4" />
+                <span className="font-medium">{isVip ? "∞" : creditsLeft}</span>
+              </button>
+            </div>
           </motion.header>
         )}
       </AnimatePresence>
@@ -208,11 +228,17 @@ const Index = () => {
             exit={{ opacity: 0, height: 0 }}
             className="bg-primary/5 border-b border-primary/10"
           >
-            <div className="max-w-lg mx-auto flex items-center justify-center gap-2 py-2 px-4">
-              <span className="text-xs text-muted-foreground">Ton ID de membre :</span>
-              <span className="text-xs font-mono font-bold text-primary">{toShortId(user.id)}</span>
-              <button onClick={handleCopyId} className="text-muted-foreground hover:text-primary transition-colors">
-                {copied ? <CheckCircle className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+            <div className="max-w-lg mx-auto flex items-center justify-between py-2 px-4">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Ton ID :</span>
+                <span className="text-xs font-mono font-bold text-primary">{toShortId(user.id)}</span>
+                <button onClick={handleCopyId} className="text-muted-foreground hover:text-primary transition-colors">
+                  {copied ? <CheckCircle className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <button onClick={handleLogout} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors">
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Déconnexion</span>
               </button>
             </div>
           </motion.div>
