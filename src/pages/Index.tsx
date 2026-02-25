@@ -7,7 +7,7 @@ import ResponseCards, { AIResponses } from "@/components/ResponseCards";
 import RizzMeter from "@/components/RizzMeter";
 import PremiumModal from "@/components/PremiumModal";
 import AuthModal from "@/components/AuthModal";
-import { ArrowLeft, Crown } from "lucide-react";
+import { ArrowLeft, Crown, Copy, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
@@ -21,6 +21,7 @@ interface AnalysisResult {
 }
 
 const FREE_LIMIT = 3;
+const toShortId = (uuid: string) => `RIZZ-${uuid.slice(-6).toUpperCase()}`;
 
 const Index = () => {
   const [state, setState] = useState<AppState>("hero");
@@ -29,12 +30,11 @@ const Index = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const pendingFileRef = useRef<File | null>(null);
 
-  // Auth & user state
   const [user, setUser] = useState<User | null>(null);
   const [isVip, setIsVip] = useState(false);
   const [uploadsCount, setUploadsCount] = useState(0);
+  const [copied, setCopied] = useState(false);
 
-  // Session-based counter for anonymous users
   const [anonUploads, setAnonUploads] = useState(() => {
     const stored = sessionStorage.getItem("rizz_anon_uploads");
     return stored ? parseInt(stored, 10) : 0;
@@ -44,10 +44,7 @@ const Index = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Load profile & role data
-        setTimeout(() => {
-          loadUserData(session.user.id);
-        }, 0);
+        setTimeout(() => loadUserData(session.user.id), 0);
       }
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -82,7 +79,6 @@ const Index = () => {
 
   const handleUpload = useCallback(
     (file: File) => {
-      // Check limits
       if (!user && anonUploads >= FREE_LIMIT) {
         setShowAuth(true);
         return;
@@ -91,7 +87,6 @@ const Index = () => {
         setShowPremium(true);
         return;
       }
-
       pendingFileRef.current = file;
       setState("scanning");
     },
@@ -104,8 +99,6 @@ const Index = () => {
 
     try {
       const imageBase64 = await fileToBase64(file);
-
-      // Get previous analyses for context (if logged in)
       let previousAnalyses: any[] = [];
       if (user) {
         const { data } = await supabase
@@ -131,7 +124,6 @@ const Index = () => {
         responses: data.responses,
       };
 
-      // Save analysis & increment counter
       if (user) {
         await Promise.all([
           supabase.from("analyses").insert({
@@ -164,9 +156,16 @@ const Index = () => {
   };
 
   const handleAuthSuccess = () => {
-    // Reset anon counter since user is now logged in
     sessionStorage.removeItem("rizz_anon_uploads");
     setAnonUploads(0);
+  };
+
+  const handleCopyId = () => {
+    if (!user) return;
+    navigator.clipboard.writeText(toShortId(user.id));
+    setCopied(true);
+    toast.success("ID copié !");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -183,7 +182,12 @@ const Index = () => {
             <button onClick={handleBack} className="text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="font-display font-bold gradient-text">Rizz-AI</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="font-display font-bold gradient-text">Rizz-AI</h1>
+              {user && isVip && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary/20 text-secondary font-bold">VIP 👑</span>
+              )}
+            </div>
             <button
               onClick={() => (user && !isVip && creditsLeft <= 0 ? setShowPremium(true) : !user ? setShowAuth(true) : null)}
               className="flex items-center gap-1 text-xs text-secondary"
@@ -192,6 +196,26 @@ const Index = () => {
               <span className="font-medium">{isVip ? "∞" : creditsLeft}</span>
             </button>
           </motion.header>
+        )}
+      </AnimatePresence>
+
+      {/* User ID banner */}
+      <AnimatePresence>
+        {user && state !== "hero" && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-primary/5 border-b border-primary/10"
+          >
+            <div className="max-w-lg mx-auto flex items-center justify-center gap-2 py-2 px-4">
+              <span className="text-xs text-muted-foreground">Ton ID de membre :</span>
+              <span className="text-xs font-mono font-bold text-primary">{toShortId(user.id)}</span>
+              <button onClick={handleCopyId} className="text-muted-foreground hover:text-primary transition-colors">
+                {copied ? <CheckCircle className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
