@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { X, Phone, User, Loader2, CheckCircle } from "lucide-react";
+import { X, User, Loader2, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -26,14 +26,13 @@ const countryCodes = [
   { code: "+1", country: "🇺🇸 USA / 🇨🇦 Canada" },
 ];
 
-type Step = "form" | "verifying" | "otp" | "success";
+type Step = "form" | "verifying" | "success";
 
 const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   const [step, setStep] = useState<Step>("form");
   const [pseudo, setPseudo] = useState("");
   const [phone, setPhone] = useState("");
   const [countryCode, setCountryCode] = useState("+221");
-  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmitForm = async () => {
@@ -41,24 +40,14 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       toast.error("Remplis tous les champs waw !");
       return;
     }
-    setStep("verifying");
-    // Simulate WhatsApp verification delay
-    setTimeout(() => setStep("otp"), 2500);
-  };
-
-  const handleVerifyOtp = async () => {
-    if (otp.length !== 4) {
-      toast.error("Entre un code à 4 chiffres");
-      return;
-    }
     setLoading(true);
+    setStep("verifying");
+
     try {
-      // Use email-based auth with phone as identifier
       const email = `${countryCode.replace("+", "")}${phone}@rizz-ai.app`;
       const password = `rizz_${countryCode}${phone}_${pseudo}`;
 
-      // Try signup first
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -67,12 +56,8 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
       });
 
       if (signUpError) {
-        // If user exists, try login
         if (signUpError.message.includes("already") || signUpError.message.includes("exists")) {
-          const { error: loginError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
+          const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
           if (loginError) throw loginError;
         } else {
           throw signUpError;
@@ -88,7 +73,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     } catch (e: any) {
       console.error("Auth error:", e);
       toast.error("Erreur d'inscription. Réessaie !");
-      setStep("otp");
+      setStep("form");
     } finally {
       setLoading(false);
     }
@@ -98,7 +83,6 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
     setStep("form");
     setPseudo("");
     setPhone("");
-    setOtp("");
   };
 
   return (
@@ -120,7 +104,7 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           >
             <div className="glass-card rounded-t-3xl p-6 max-w-lg mx-auto">
               <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-6" />
-              {step !== "verifying" && step !== "success" && (
+              {step === "form" && (
                 <button onClick={() => { onClose(); resetForm(); }} className="absolute top-6 right-6 text-muted-foreground hover:text-foreground transition-colors">
                   <X className="w-5 h-5" />
                 </button>
@@ -182,9 +166,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                     <motion.button
                       whileTap={{ scale: 0.97 }}
                       onClick={handleSubmitForm}
-                      className="w-full gradient-bg gradient-bg-hover py-4 rounded-2xl font-display font-semibold text-primary-foreground neon-glow-violet"
+                      disabled={loading}
+                      className="w-full gradient-bg gradient-bg-hover py-4 rounded-2xl font-display font-semibold text-primary-foreground neon-glow-violet disabled:opacity-50"
                     >
-                      Recevoir le code 📱
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "S'inscrire 🚀"}
                     </motion.button>
                   </motion.div>
                 )}
@@ -192,43 +177,9 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 {step === "verifying" && (
                   <motion.div key="verifying" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-8">
                     <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-                    <h3 className="font-display text-xl font-bold mb-2">Vérification en cours...</h3>
+                    <h3 className="font-display text-xl font-bold mb-2">Inscription en cours...</h3>
                     <p className="text-muted-foreground text-sm">
-                      Envoi du code via WhatsApp à {countryCode} {phone}
-                    </p>
-                  </motion.div>
-                )}
-
-                {step === "otp" && (
-                  <motion.div key="otp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                    <div className="text-center mb-8">
-                      <Phone className="w-12 h-12 text-primary mx-auto mb-4" />
-                      <h3 className="font-display text-xl font-bold mb-2">Entre le code</h3>
-                      <p className="text-muted-foreground text-sm">
-                        Code envoyé à {countryCode} {phone}
-                      </p>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                      placeholder="• • • •"
-                      className="w-full glass-card rounded-xl px-4 py-4 text-center text-foreground text-2xl font-display tracking-[1em] placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary mb-6"
-                      maxLength={4}
-                    />
-
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      onClick={handleVerifyOtp}
-                      disabled={loading}
-                      className="w-full gradient-bg gradient-bg-hover py-4 rounded-2xl font-display font-semibold text-primary-foreground neon-glow-violet disabled:opacity-50"
-                    >
-                      {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Valider ✅"}
-                    </motion.button>
-
-                    <p className="text-center text-muted-foreground text-xs mt-4">
-                      Pour le test, entre n'importe quel code à 4 chiffres
+                      On te prépare ton accès 🔥
                     </p>
                   </motion.div>
                 )}

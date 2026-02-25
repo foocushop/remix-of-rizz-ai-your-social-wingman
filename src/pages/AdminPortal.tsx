@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Lock, Users, BarChart3, Crown, LogOut, Loader2 } from "lucide-react";
+import { Lock, Users, BarChart3, Crown, LogOut, Loader2, Search, Copy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const ADMIN_PASSWORD = "ZiablosurYoutube132";
+
+const toShortId = (uuid: string) => `RIZZ-${uuid.slice(-6).toUpperCase()}`;
 
 interface AdminUser {
   id: string;
@@ -28,6 +30,7 @@ const AdminPortal = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
@@ -69,6 +72,16 @@ const AdminPortal = () => {
       setTogglingId(null);
     }
   };
+
+  const filteredUsers = users.filter((u) => {
+    const q = search.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      u.pseudo.toLowerCase().includes(q) ||
+      u.phone.includes(q) ||
+      toShortId(u.id).toLowerCase().includes(q)
+    );
+  });
 
   if (!authenticated) {
     return (
@@ -134,10 +147,26 @@ const AdminPortal = () => {
               ))}
             </div>
 
+            {/* Search */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Rechercher par ID, pseudo ou téléphone..."
+                  className="w-full glass-card rounded-xl pl-10 pr-4 py-3 text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
             {/* Users */}
-            <h2 className="font-display text-lg font-bold text-foreground mb-4">Gestion des utilisateurs</h2>
+            <h2 className="font-display text-lg font-bold text-foreground mb-4">
+              Gestion des utilisateurs ({filteredUsers.length})
+            </h2>
             <div className="space-y-3">
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <motion.div
                   key={user.id}
                   initial={{ opacity: 0 }}
@@ -145,19 +174,22 @@ const AdminPortal = () => {
                   className="glass-card rounded-xl p-4 flex items-center justify-between gap-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
+                        {toShortId(user.id)}
+                      </span>
                       <p className="font-medium text-foreground truncate">{user.pseudo}</p>
                       {user.is_vip && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/20 text-secondary font-medium">VIP</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-secondary/20 text-secondary font-medium">VIP 👑</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{user.phone} • {user.uploads_count} analyses</p>
+                    <p className="text-xs text-muted-foreground mt-1">{user.phone} • {user.uploads_count} analyses</p>
                   </div>
                   <motion.button
                     whileTap={{ scale: 0.95 }}
                     onClick={() => toggleVip(user.id)}
                     disabled={togglingId === user.id}
-                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
+                    className={`px-4 py-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
                       user.is_vip
                         ? "glass-card text-muted-foreground hover:text-foreground"
                         : "gradient-bg text-primary-foreground"
@@ -168,13 +200,15 @@ const AdminPortal = () => {
                     ) : user.is_vip ? (
                       "Retirer VIP"
                     ) : (
-                      "Passer VIP 👑"
+                      "Promouvoir VIP 👑"
                     )}
                   </motion.button>
                 </motion.div>
               ))}
-              {users.length === 0 && (
-                <p className="text-center text-muted-foreground py-8">Aucun utilisateur inscrit</p>
+              {filteredUsers.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  {search ? "Aucun utilisateur trouvé" : "Aucun utilisateur inscrit"}
+                </p>
               )}
             </div>
           </>
